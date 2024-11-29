@@ -1,3 +1,4 @@
+import { offsetPoints } from '../utils/transforms';
 import { BaseEntity } from './baseEntity/baseEntity';
 import { Vector3, 
 	Group,
@@ -77,16 +78,16 @@ export class SolidEntity extends BaseEntity {
 		let points = entity.corners.map( p => new Vector3( p.x, p.y, p.z ) );
 		points.splice( 0, 0, points.pop() );
 		
+		const position = offsetPoints( points );
+		const scale = new Vector3( 1,1,1 );
         
 		const shape = new Shape( points );
 		let geometry = new ShapeGeometry( shape );
-		
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
 
-		this._extrusionTransform( entity, geometry );
+		scale.x = entity.extrusionZ < 0 ? -1 : 1;
     
         
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale };
 	}
 
 	_extrusionTransform( entity, geometry ) {

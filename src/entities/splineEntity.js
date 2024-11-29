@@ -5,6 +5,7 @@ import { Group,
 	Line,
 	BufferAttribute } from 'three';
 import * as bSpline from 'dxf/lib/util/bSpline';
+import { offsetPoints } from '../utils/transforms';
 /**
  * @class SplineEntity
  * @see {@link baseEntity/BaseEntity.md}
@@ -84,12 +85,13 @@ export class SplineEntity extends BaseEntity {
 		
 		var points = this.getBSplinePolyline( entity.controlPoints, entity.degree, entity.knots, entity.weights );
 
+		const position = offsetPoints( points );
+		const scale = new Vector3( 1,1,1 );
+
 		let geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
-
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
             
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale };
 	}
 
 	getBSplinePolyline( controlPoints, degree, knots, weights = null, interpolationsPerSplineSegment = 25 ) {

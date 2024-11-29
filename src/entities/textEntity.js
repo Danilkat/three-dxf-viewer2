@@ -1,7 +1,8 @@
 import { BaseEntity } from './baseEntity/baseEntity';
 import { Mesh, Group,
 	ShapeGeometry, 
-	Quaternion } from 'three';
+	Quaternion, 
+	Vector3 } from 'three';
 import { MTextFormatParser } from '../text/MTextFormatParser.js';
 import { Properties } from './baseEntity/properties';
 
@@ -42,17 +43,20 @@ export class TextEntity extends BaseEntity {
 			let material = null;
 			let position = null;
 			let scale = null;
+			let rotation = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
 				position = cached.position;
 				scale = cached.scale;
+				rotation = cached.rotation;
 			} else {
 				let _drawData = this.drawText( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
 				position = _drawData.position;
 				scale = _drawData.scale;
+				rotation = _drawData.rotation;
                 
 				if( !Properties.onBeforeTextDraw ) this._setCache( entity, _drawData );
 			}
@@ -62,6 +66,7 @@ export class TextEntity extends BaseEntity {
 			mesh.userData = { entity: entity };
 			mesh.position.copy( position );
 			mesh.scale.copy( scale );
+			mesh.rotation.copy( rotation );
 
 			//add to group
 			group.add( mesh );
@@ -87,23 +92,20 @@ export class TextEntity extends BaseEntity {
 		//get string
 		let geometry = this._getTextGeometry( entity );
 
-		this._scaleText( geometry, entity );
-        
-		let posAndRot = this._getPosAndRotation( entity );
-
-		if( posAndRot.rotation )  geometry.applyQuaternion( posAndRot.rotation );
-		geometry.translate( posAndRot.pos.x , posAndRot.pos.y, posAndRot.pos.z );
+		const scale = this._scaleText( geometry, entity );
+    
+		const { pos: position, rotation } = this._getPosAndRotation( entity );
 		
-		this._alignText( geometry, entity, posAndRot.pos );
+		const alignPosition = this._alignText( geometry, entity, position );
 		
-		this._translateCenter( geometry, entity, posAndRot.pos );
+		const translationPosition = this._translateCenter( geometry, entity, position );
             
 		//get material
 		let material = this._colorHelper.getMaterial( entity, 'shape', this.data.tables );
 
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+		// const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
 
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position: alignPosition.add( translationPosition ), scale, rotation };
 	}
 
 	_getTextGeometry( entity ) {
@@ -145,7 +147,7 @@ export class TextEntity extends BaseEntity {
 		let scaleX = typeof entity.horizontalWidth !== 'undefined' ? entity.horizontalWidth / width : 1;
 		let scaleY = typeof entity.verticalHeight !== 'undefined' ? entity.verticalHeight / height : 1;
 
-		geometry.scale( scaleX, scaleY, 1 );
+		return new Vector3( scaleX, scaleY, 1 );
 	}
 
 	_getTextStrings( entity ) {
@@ -215,8 +217,9 @@ export class TextEntity extends BaseEntity {
 	_translateCenter( geometry, entity, center ) {
 
 		let attachmentPoint = entity.attachmentPoint;
+		const translation = new Vector3( 0,0,0 );
         
-		if( !attachmentPoint ) return;
+		if( !attachmentPoint ) return translation;
 
 		geometry.computeBoundingBox();
 		let width = geometry.boundingBox.max.x - geometry.boundingBox.min.x;
@@ -231,41 +234,43 @@ export class TextEntity extends BaseEntity {
 		switch ( attachmentPoint ) {
 		case 1:
 			// Top Left
-			geometry.translate( center.x - geometry.boundingBox.min.x , center.y - geometry.boundingBox.max.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.min.x , center.y - geometry.boundingBox.max.y , -0.5 * depth );
 			break;
 		case 2:
 			// Top Center
-			geometry.translate( center.x - currentCenter.x, center.y - geometry.boundingBox.max.y , -0.5 * depth );
+			translation.set( center.x - currentCenter.x, center.y - geometry.boundingBox.max.y , -0.5 * depth );
 			break;
 		case 3:
 			// Top Right
-			geometry.translate( center.x - geometry.boundingBox.max.x , center.y - geometry.boundingBox.max.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.max.x , center.y - geometry.boundingBox.max.y , -0.5 * depth );
 			break;
 		case 4:
 			// Middle Left
-			geometry.translate( center.x - geometry.boundingBox.min.x , center.y - currentCenter.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.min.x , center.y - currentCenter.y , -0.5 * depth );
 			break;
 		case 5:
 			// Middle Center
-			geometry.translate( center.x - currentCenter.x , center.y - currentCenter.y , -0.5 * depth );
+			translation.set( center.x - currentCenter.x , center.y - currentCenter.y , -0.5 * depth );
 			break;
 		case 6:
 			// Middle Right
-			geometry.translate( center.x - geometry.boundingBox.max.x, center.y - currentCenter.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.max.x, center.y - currentCenter.y , -0.5 * depth );
 			break;
 		case 7:
 			// Bottom Left
-			geometry.translate( center.x - geometry.boundingBox.min.x , center.y - geometry.boundingBox.min.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.min.x , center.y - geometry.boundingBox.min.y , -0.5 * depth );
 			break;
 		case 8:
 			// Bottom Center
-			geometry.translate( center.x - currentCenter.x , geometry.boundingBox.min.y, -0.5 * depth );
+			translation.set( center.x - currentCenter.x , geometry.boundingBox.min.y, -0.5 * depth );
 			break;
 		case 9:
 			// Bottom Right
-			geometry.translate( center.x - geometry.boundingBox.max.x, geometry.boundingBox.min.y , -0.5 * depth );
+			translation.set( center.x - geometry.boundingBox.max.x, geometry.boundingBox.min.y , -0.5 * depth );
 			break;
 		}
+
+		return translation;
 	}
 
 	_alignText( geometry, entity, center ) {
@@ -345,7 +350,7 @@ export class TextEntity extends BaseEntity {
 			y = center.y - geometry.boundingBox.max.y;
 			break;
 		}
-		geometry.translate( x, y, 0 );
+		return new Vector3( x, y, 0 );
 	}
 
 	_replaceSpecialChars( str ) {
