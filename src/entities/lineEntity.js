@@ -5,6 +5,7 @@ import { Line,
 	Group } from 'three';
 import { BufferAttribute } from 'three';
 import * as createArcoFromPolyline from 'dxf/lib/util/createArcForLWPolyline';
+import { offsetPoints } from '../utils/transforms';
 
 /**
  * @class LineEntity
@@ -83,16 +84,17 @@ export class LineEntity extends BaseEntity {
 
 		let material = this._colorHelper.getMaterial( entity, lineType, this.data.tables );
 
-		let geometry = new BufferGeometry().setFromPoints( [
+		const points = [
 			new Vector3( extrusionZ * entity.start.x, entity.start.y, entity.start.z ),
 			new Vector3( extrusionZ * entity.end.x, entity.end.y, entity.end.z ),
-		] );
+		];
+		const position = offsetPoints( points );
+		const scale = new Vector3( 1,1,1 );
+
+		let geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( [ 0, 1 ] ), 1 ) );
 
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
-    
-
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale };
 	}
 
 	/**
@@ -112,12 +114,13 @@ export class LineEntity extends BaseEntity {
 		let material = this._colorHelper.getMaterial( entity, lineType, this.data.tables );
 
 		let points = this._getPolyLinePoints( entity.vertices, entity.closed );
+		const position = offsetPoints( points );
+		const scale = new Vector3( 1,1,1 );
+
 		let geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
 
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
-
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale };
 	}
 
 	_getPolyLinePoints( vertices, closed, extrusionZ = 1 ) {
@@ -145,7 +148,7 @@ export class LineEntity extends BaseEntity {
 			}
 		}
 
-		if( closed ) points.push( points[0] );
+		if( closed ) points.push( points[0].clone() );
 
 		return points;
 	}
