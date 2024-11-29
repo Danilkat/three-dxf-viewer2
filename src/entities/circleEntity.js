@@ -1,10 +1,12 @@
+import { offsetPoints } from '../utils/transforms';
 import { BaseEntity } from './baseEntity/baseEntity';
 import { Group,
 	ArcCurve,
 	BufferGeometry,
 	Line,
 	EllipseCurve,
-	BufferAttribute } from 'three';
+	BufferAttribute, 
+	Vector3 } from 'three';
 
 /**
  * @class CircleEntity
@@ -108,6 +110,7 @@ export class CircleEntity extends BaseEntity {
 		);
 
 		let points = curve.getPoints( 32 );
+		const position = offsetPoints( points );
 		var geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
     
@@ -116,10 +119,11 @@ export class CircleEntity extends BaseEntity {
 			y: entity.center ? entity.center.y : entity.y,
 			z: entity.center ? entity.center.z : entity.z
 		};
-		geometry.translate( entity.extrusionZ < 0 ? -center.x : center.x , center.y, center.z );
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+		center.x = entity.extrusionZ < 0 ? -center.x : center.x;
+		position.add( center );
+		// geometry.translate( entity.extrusionZ < 0 ? -center.x : center.x , center.y, center.z );
 		
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale: new Vector3( 1,1,1 ) };
 	}
 
 	/**
