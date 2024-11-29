@@ -1,3 +1,4 @@
+import { offsetPoints } from '../utils/transforms';
 import { BaseEntity } from './baseEntity/baseEntity';
 import { LineEntity } from './lineEntity';
 import { SplineEntity } from './splineEntity';
@@ -94,10 +95,14 @@ export class HatchEntity extends BaseEntity {
 
 		let geometry = null;
 		let material = null;
+		let position = null;
+		const scale = new Vector3( 1,1,1 );
 
 		//CONVERT ENTITIES TO POINTS
 		this._calculatePoints( entity );
-		geometry = this._generateBoundary( entity );
+		const data = this._generateBoundary( entity );
+		geometry = data.geometry;
+		position = data.position;
 
 		if( entity.fillType === 'SOLID' ) {
             
@@ -118,9 +123,9 @@ export class HatchEntity extends BaseEntity {
             material = this._colorHelper.getMaterial( entity, lineType, this.data.tables );*/
 		}
         
-		if( geometry ) this._extrusionTransform( entity, geometry );
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
-		return { geometry: geometry, material: material, ...transformData };		
+		if( geometry && entity.extrusionDir.z < 0 ) scale.x = -1;
+		// const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+		return { geometry: geometry, material: material, position, scale };		
 	}
 
 	_calculatePoints( entity ) {
@@ -267,12 +272,16 @@ export class HatchEntity extends BaseEntity {
 		const outerPoints = this._mergeLoopPoints( outerLoop );
 		if( outerPoints.length === 0 ) return null;
 
+		const position = offsetPoints( outerPoints );
+
 		const shape = new Shape();
-		shape.setFromPoints( this._mergeLoopPoints( outerLoop ) );
+		shape.setFromPoints( outerPoints );
+    
 
 		//create hole shapes
 		for( let i = 0; i < holeLoops.length; i++ ) {
 			const holePoints = this._mergeLoopPoints( holeLoops[i] );
+			holePoints.forEach( point => point.sub( position ) );
 			if( holePoints.length === 0 ) continue;
 			const hole = new Shape();
 			hole.setFromPoints( holePoints );
@@ -280,7 +289,7 @@ export class HatchEntity extends BaseEntity {
 		}
 
 		//return geometry
-		return new ShapeGeometry( shape );
+		return { geometry: new ShapeGeometry( shape ), position };
 	}
 
 	_calculateBoxes( boundary ) {
