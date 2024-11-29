@@ -36,13 +36,19 @@ export class LineEntity extends BaseEntity {
 			let cached = this._getCached( entity );
 			let geometry = null;
 			let material = null;
+			let position = null;
+			let scale = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
+				position = cached.position;
+				scale = cached.scale;
 			} else {
 				let _drawData = entity.type === 'LINE' ? this.drawLine( entity ) : this.drawPolyLine( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
+				position = _drawData.position;
+				scale = _drawData.scale;
                 
 				this._setCache( entity, _drawData );
 			}
@@ -51,6 +57,8 @@ export class LineEntity extends BaseEntity {
 			let mesh = new Line( geometry, material );
 			if( material.type === 'LineDashedMaterial' ) this._geometryHelper.fixMeshToDrawDashedLines( mesh );
 			mesh.userData = { entity: entity };
+			mesh.position.copy( position );
+			mesh.scale.copy( scale );
 
 			//add to group
 			group.add( mesh );
@@ -80,9 +88,11 @@ export class LineEntity extends BaseEntity {
 			new Vector3( extrusionZ * entity.end.x, entity.end.y, entity.end.z ),
 		] );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( [ 0, 1 ] ), 1 ) );
+
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
     
 
-		return { geometry: geometry, material: material };
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	/**
@@ -105,7 +115,9 @@ export class LineEntity extends BaseEntity {
 		let geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
 
-		return { geometry: geometry, material: material };
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	_getPolyLinePoints( vertices, closed, extrusionZ = 1 ) {

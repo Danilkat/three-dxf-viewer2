@@ -35,13 +35,19 @@ export class SolidEntity extends BaseEntity {
 			let cached = this._getCached( entity );
 			let geometry = null;
 			let material = null;
+			let position = null;
+			let scale = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
+				position = cached.position;
+				scale = cached.scale;
 			} else {
 				let _drawData = this.drawSolid( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
+				position = _drawData.position;
+				scale = _drawData.scale;
                 
 				this._setCache( entity, _drawData );
 			}
@@ -49,6 +55,8 @@ export class SolidEntity extends BaseEntity {
 			//create mesh
 			let mesh = new Mesh( geometry, material );
 			mesh.userData = { entity: entity };
+			mesh.position.copy( position );
+			mesh.scale.copy( scale );
 
 			//add to group
 			group.add( mesh );
@@ -73,9 +81,12 @@ export class SolidEntity extends BaseEntity {
 		const shape = new Shape( points );
 		let geometry = new ShapeGeometry( shape );
 		
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+
 		this._extrusionTransform( entity, geometry );
+    
         
-		return { geometry: geometry, material: material };
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	_extrusionTransform( entity, geometry ) {

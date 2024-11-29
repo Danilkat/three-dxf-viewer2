@@ -40,13 +40,19 @@ export class TextEntity extends BaseEntity {
 			let cached = this._getCached( entity );
 			let geometry = null;
 			let material = null;
+			let position = null;
+			let scale = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
+				position = cached.position;
+				scale = cached.scale;
 			} else {
 				let _drawData = this.drawText( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
+				position = _drawData.position;
+				scale = _drawData.scale;
                 
 				if( !Properties.onBeforeTextDraw ) this._setCache( entity, _drawData );
 			}
@@ -54,6 +60,8 @@ export class TextEntity extends BaseEntity {
 			//create mesh
 			let mesh = new Mesh( geometry, material );
 			mesh.userData = { entity: entity };
+			mesh.position.copy( position );
+			mesh.scale.copy( scale );
 
 			//add to group
 			group.add( mesh );
@@ -93,7 +101,9 @@ export class TextEntity extends BaseEntity {
 		//get material
 		let material = this._colorHelper.getMaterial( entity, 'shape', this.data.tables );
 
-		return { geometry: geometry, material: material };
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	_getTextGeometry( entity ) {

@@ -50,13 +50,19 @@ export class HatchEntity extends BaseEntity {
 			let cached = this._getCached( entity );
 			let geometry = null;
 			let material = null;
+			let position = null;
+			let scale = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
+				position = cached.position;
+				scale = cached.scale;
 			} else {
 				let _drawData = this.drawHatch( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
+				position = _drawData.position;
+				scale = _drawData.scale;
                 
 				this._setCache( entity, _drawData );
 			}
@@ -64,6 +70,8 @@ export class HatchEntity extends BaseEntity {
 			if( geometry ) {
                 
 				let obj = new Mesh( geometry, material );
+				obj.position.copy( position );
+				obj.scale.copy( scale );
 
 				obj.userData = { entity: entity };
 				obj.renderOrder = entity.fillType === 'SOLID' ? -1 : 0;
@@ -111,7 +119,8 @@ export class HatchEntity extends BaseEntity {
 		}
         
 		if( geometry ) this._extrusionTransform( entity, geometry );
-		return { geometry: geometry, material: material };		
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+		return { geometry: geometry, material: material, ...transformData };		
 	}
 
 	_calculatePoints( entity ) {

@@ -39,13 +39,19 @@ export class CircleEntity extends BaseEntity {
 
 			let geometry = null;
 			let material = null;
+			let position = null;
+			let scale = null;
 			if( cached ) { 
 				geometry = cached.geometry;
 				material = cached.material;
+				position = cached.position;
+				scale = cached.scale;
 			} else {
 				let _drawData = entity.type === 'ELLIPSE' ? this.drawEllipse( entity ) :this.drawCircle( entity );
 				geometry = _drawData.geometry;
 				material = _drawData.material;
+				position = _drawData.position;
+				scale = _drawData.scale;
                 
 				this._setCache( entity, _drawData );
 			}
@@ -54,6 +60,8 @@ export class CircleEntity extends BaseEntity {
 			let mesh = new Line( geometry, material );
 			if( material.type === 'LineDashedMaterial' ) this._geometryHelper.fixMeshToDrawDashedLines( mesh );
 			mesh.userData = { entity: entity };
+			mesh.position.copy( position );
+			mesh.scale.copy( scale );
 
 			//add to group
 			group.add( mesh );
@@ -109,8 +117,9 @@ export class CircleEntity extends BaseEntity {
 			z: entity.center ? entity.center.z : entity.z
 		};
 		geometry.translate( entity.extrusionZ < 0 ? -center.x : center.x , center.y, center.z );
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
 		
-		return { geometry: geometry, material: material };
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	/**
@@ -153,8 +162,9 @@ export class CircleEntity extends BaseEntity {
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
     
 		this._extrusionTransform( entity, geometry, center );
+		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
 
-		return { geometry: geometry, material: material };
+		return { geometry: geometry, material: material, ...transformData };
 	}
 
 	_extrusionTransform( entity, geometry, center ) {

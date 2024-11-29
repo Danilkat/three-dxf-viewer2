@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { BufferGeometry, Vector3, Quaternion, Matrix4 } from 'three';
 
 /**
  * @class GeometryHelper
@@ -36,5 +36,28 @@ export class GeometryHelper {
 	fixMeshToDrawDashedLines( line ) {
 		if( line.geometry.index ) line.geometry = line.geometry.toNonIndexed();
 		line.computeLineDistances();
+	}
+
+	/**
+   * 
+   * @param {BufferGeometry} geometry 
+   */
+	offsetByBoundingBox( geometry ) {
+		geometry.computeBoundingBox();
+		const boundingBox = geometry.boundingBox;
+
+		const center = new Vector3();
+		boundingBox.getCenter( center );
+
+		// Translate geometry by the negative center
+		geometry.translate( -center.x, -center.y, -center.z );
+
+		// If you're dealing with large numbers, you can optionally scale the geometry to normalize it as well:
+		const size = boundingBox.getSize( new Vector3() ); // Get the size of the bounding box
+		const maxSize = Math.max( size.x, size.y, size.z ); // Find the largest dimension
+		geometry.scale( 1 / maxSize, 1 / maxSize, 1 / maxSize ); // Normalize if needed
+		geometry.computeBoundingBox();
+
+		return { position: center, scale: new Vector3( 1, 1, 1 ).multiplyScalar( maxSize ) };
 	}
 }
