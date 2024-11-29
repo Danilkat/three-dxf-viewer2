@@ -161,14 +161,14 @@ export class CircleEntity extends BaseEntity {
 		);
 
 		let points = curve.getPoints( 32 );
-        
+		const position = offsetPoints( points );
 		let geometry = new BufferGeometry().setFromPoints( points );
 		geometry.setIndex( new BufferAttribute( new Uint16Array( this._geometryHelper.generatePointIndex( points ) ), 1 ) );
     
-		this._extrusionTransform( entity, geometry, center );
-		const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
+		// this._extrusionTransform( entity, geometry, center );
+		// const transformData = this._geometryHelper.offsetByBoundingBox( geometry );
 
-		return { geometry: geometry, material: material, ...transformData };
+		return { geometry: geometry, material: material, position, scale: new Vector3( entity.extrusionZ < 0 ? -1 : 1, 1, 1 ) };
 	}
 
 	_extrusionTransform( entity, geometry, center ) {
